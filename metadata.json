@@ -1,0 +1,6 @@
+{
+  "name": "Spesa in Famiglia",
+  "description": "App minimalista e reattiva per liste della spesa condivise in tempo reale per le famiglie, con categorie automatiche e gestione ultra-rapida.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing their family association",
+      "type": "object",
+      "properties": {
+        "familyId": { "type": "string", "description": "ID of the family they belong to" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["email", "createdAt", "updatedAt"]
+    },
+    "Family": {
+      "title": "Family",
+      "description": "A family group sharing a list",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "ownerId", "createdAt"]
+    },
+    "Item": {
+      "title": "Item",
+      "description": "An item in the shopping list",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "completed": { "type": "boolean" },
+        "addedBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "categoryId", "quantity", "completed", "addedBy", "createdAt", "updatedAt"]
+    },
+    "History": {
+      "title": "History",
+      "description": "Frequently added items for suggestions",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "count": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "categoryId", "count", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/families/{familyId}": {
+      "schema": { "$ref": "#/entities/Family" },
+      "description": "Family groups"
+    },
+    "/families/{familyId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/Item" },
+      "description": "Shopping list items for a family"
+    },
+    "/families/{familyId}/history/{historyId}": {
+      "schema": { "$ref": "#/entities/History" },
+      "description": "Shopping history for a family"
+    }
+  }
+}
