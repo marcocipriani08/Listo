@@ -335,6 +335,27 @@ export async function leaveFamily(userId: string, familyId: string) {
 
 export async function deleteFamily(userId: string, familyId: string) {
   try {
+    // 1. Fetch and delete items in the family
+    const itemsSnapshot = await getDocs(collection(db, 'families', familyId, 'items'));
+    const itemsBatch = writeBatch(db);
+    itemsSnapshot.forEach((doc) => {
+      itemsBatch.delete(doc.ref);
+    });
+    if (itemsSnapshot.size > 0) {
+      await itemsBatch.commit();
+    }
+
+    // 2. Fetch and delete history in the family
+    const historySnapshot = await getDocs(collection(db, 'families', familyId, 'history'));
+    const historyBatch = writeBatch(db);
+    historySnapshot.forEach((doc) => {
+      historyBatch.delete(doc.ref);
+    });
+    if (historySnapshot.size > 0) {
+      await historyBatch.commit();
+    }
+
+    // 3. Delete the family document itself
     const famRef = doc(db, 'families', familyId);
     await deleteDoc(famRef);
     

@@ -136,7 +136,7 @@ service cloud.firestore {
           && incoming().createdAt == existing().createdAt
           && incoming().addedBy == existing().addedBy
           && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'categoryId', 'quantity', 'completed', 'updatedAt']);
-        allow delete: if isSignedIn() && isMemberOfFamily(familyId);
+        allow delete: if isSignedIn() && (isMemberOfFamily(familyId) || get(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid);
       }
 
       match /history/{historyId} {
@@ -150,7 +150,7 @@ service cloud.firestore {
           && isValidId(historyId)
           && isValidHistoryUpdate(incoming())
           && incoming().diff(existing()).affectedKeys().hasOnly(['count', 'categoryId', 'updatedAt']);
-        allow delete: if isSignedIn() && isMemberOfFamily(familyId);
+        allow delete: if isSignedIn() && (isMemberOfFamily(familyId) || get(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid);
       }
     }
   }

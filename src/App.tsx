@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { auth, loginWithGoogle, logout } from './lib/firebase';
+import { auth, loginWithGoogle, logout, loginWithEmail, registerWithEmail } from './lib/firebase';
 import { useUserProfile, useShoppingList, useShoppingHistory, addShoppingItem, updateItemQuantity, toggleItemCompleted, clearCompletedItems, createFamily, joinFamily, useJoinedFamilies, leaveFamily, deleteFamily, useFamily, updateFamily } from './lib/hooks';
 import { CATEGORIES, ShoppingItem, Family, UserProfile } from './types';
 import { Apple, Milk, Beef, Croissant, Wine, Package, Sparkles, ShoppingBag, Plus, Check, Trash2, LogOut, Loader2, Sparkles as SparklesIcon, CheckCircle2, ChevronLeft, Lock, LogIn, MoreVertical, Edit2, KeyRound, X } from 'lucide-react';
@@ -66,30 +66,157 @@ export default function App() {
 
 function LoginView() {
   const [loading, setLoading] = useState(false);
-  const handleLogin = async () => {
+  const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleGoogleLogin = async () => {
     setLoading(true);
+    setError(null);
     try {
       await loginWithGoogle();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      let message = "Errore durante l'accesso con Google. Se stai usando Safari o restrizioni cookie, prova con un altro browser.";
+      if (e?.code === 'auth/unauthorized-domain' || (e?.message && e.message.includes('unauthorized-domain'))) {
+        message = "Dominio non autorizzato! Devi abilitare marcocipriani08.github.io nei 'Domini autorizzati' su Firebase Console.";
+      } else if (e?.message) {
+        message = e.message;
+      }
+      setError(message);
+    }
+    setLoading(false);
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError("Inserisci sia l'email che la password.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      if (mode === 'signin') {
+        await loginWithEmail(email.trim(), password);
+      } else {
+        if (password.length < 6) {
+          throw new Error("La password deve contenere almeno 6 caratteri.");
+        }
+        await registerWithEmail(email.trim(), password);
+      }
+    } catch (e: any) {
+      console.error(e);
+      let message = "Errore durante l'autenticazione.";
+      if (e?.code === 'auth/user-not-found' || e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential') {
+        message = "Email o password non corrette.";
+      } else if (e?.code === 'auth/email-already-in-use') {
+        message = "Questa email è già registrata. Accedi o reimposta la password.";
+      } else if (e?.code === 'auth/invalid-email') {
+        message = "Questo indirizzo email non è valido.";
+      } else if (e?.message) {
+        message = e.message;
+      }
+      setError(message);
     }
     setLoading(false);
   };
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50 p-4 font-sans">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden p-8 text-center flex flex-col items-center">
-        <div className="mb-6 scale-125 origin-center pt-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden p-8 flex flex-col items-center">
+        <div className="mb-4 scale-125 origin-center pt-4">
            <ListoLogo />
         </div>
-        <p className="text-slate-500 mb-8 font-medium">Liste della spesa condivise e sincronizzate in tempo reale.</p>
+        <p className="text-slate-500 mb-6 text-center text-sm font-medium">Liste della spesa condivise e sincronizzate in tempo reale.</p>
+
+        {/* Tab/Segmented control */}
+        <div className="w-full flex bg-slate-100 p-1 rounded-2xl mb-6">
+          <button
+            onClick={() => { setMode('signin'); setError(null); }}
+            className={cn(
+              "flex-1 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer",
+              mode === 'signin' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-800"
+            )}
+          >
+            Accedi
+          </button>
+          <button
+            onClick={() => { setMode('signup'); setError(null); }}
+            className={cn(
+              "flex-1 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer",
+              mode === 'signup' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-800"
+            )}
+          >
+            Registrati
+          </button>
+        </div>
+
+        {/* Email Form */}
+        <form onSubmit={handleEmailAuth} className="w-full space-y-4 mb-6">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 px-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Inserisci la tua email"
+              required
+              className="w-full bg-slate-50 border border-slate-100 hover:border-slate-200 focus:border-emerald-500 rounded-xl px-4 py-3 font-medium text-slate-800 focus:outline-none transition-all placeholder:text-slate-400 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 px-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Inserisci la tua password"
+              required
+              className="w-full bg-slate-50 border border-slate-100 hover:border-slate-200 focus:border-emerald-500 rounded-xl px-4 py-3 font-medium text-slate-800 focus:outline-none transition-all placeholder:text-slate-400 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-3.5 px-4 font-bold text-sm shadow-md active:scale-95 transition-all disabled:opacity-70 disabled:scale-100 cursor-pointer flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 size={18} className="animate-spin" /> : mode === 'signin' ? 'Entra' : 'Crea Account'}
+          </button>
+        </form>
+
+        {/* Separator */}
+        <div className="w-full flex items-center justify-between gap-4 mb-6">
+          <div className="h-px bg-slate-100 flex-1"></div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">oppure</span>
+          <div className="h-px bg-slate-100 flex-1"></div>
+        </div>
+
+        {/* Google sign-in */}
         <button 
-          onClick={handleLogin} 
+          onClick={handleGoogleLogin} 
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white rounded-2xl py-4 px-6 font-bold text-lg hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 transition-all active:scale-95 disabled:opacity-70 disabled:scale-100"
+          type="button"
+          className="w-full flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl py-4 px-6 font-bold text-sm transition-all active:scale-95 disabled:opacity-70 disabled:scale-100 cursor-pointer"
         >
-          {loading ? <Loader2 size={24} className="animate-spin" /> : 'Accedi con Google'}
+          {loading ? <Loader2 size={18} className="animate-spin" /> : 'Accedi con Google'}
         </button>
+
+        {error && (
+          <div className="w-full mt-6 p-4 text-sm text-red-600 bg-red-50/80 border border-red-100 rounded-2xl text-left font-sans animate-fadeIn">
+            <p className="font-bold mb-1 flex items-center gap-1.5 text-red-700">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-600"></span>
+              Stato Accesso:
+            </p>
+            <p className="opacity-90 leading-relaxed text-xs">{error}</p>
+            {error.includes('Dominio non autorizzato') && (
+              <p className="mt-3 text-xs text-slate-600 bg-white/70 p-2.5 rounded-xl border border-slate-100 leading-normal">
+                👉 Vai su <a href="https://console.firebase.google.com/project/sound-sanctuary-zmvz5/authentication/settings" target="_blank" rel="noopener noreferrer" className="underline font-bold text-emerald-600 hover:text-emerald-700">Firebase Console (Settings)</a>, clicca su <strong>Domini autorizzati</strong> &gt; <strong>Aggiungi dominio</strong> e inserisci: <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded font-mono text-[11px] font-bold">marcocipriani08.github.io</code>
+              </p>
+            )}
+          </div>
+        )}
       </motion.div>
     </div>
   );
