@@ -98,7 +98,6 @@ function LoginView() {
 function ListoLogo() {
   return (
     <div className="flex items-center gap-3 select-none">
-      <img src="/icon.png.png" alt="Listo Logo" className="w-10 h-10 object-contain shrink-0 drop-shadow-sm" />
       <div className="text-[2rem] font-bold tracking-tighter text-emerald-600 flex items-baseline font-sans">
         L
         <span className="relative inline-flex mx-[1px]">
