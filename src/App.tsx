@@ -264,7 +264,7 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
     setLoading(true);
     setError('');
     try {
-      const success = await joinFamily(userId, code.trim().toUpperCase(), joinPassword);
+      const success = await joinFamily(userId, code.trim().toLowerCase(), joinPassword);
       if (!success) setError('Codice famiglia non trovato.');
       else { setCode(''); setJoinPassword(''); setIsDrawerOpen(false); setActiveForm(null); if(profile?.familyId) onClose(); }
     } catch (err: any) {
@@ -451,6 +451,9 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
                                   placeholder="Codice ID (Es. A1B2C3)" 
                                   value={code} 
                                   onChange={e => setCode(e.target.value)}
+                                  autoCapitalize="none"
+                                  autoCorrect="off"
+                                  spellCheck="false"
                                   className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-medium shadow-sm"
                                 />
                                 <input 
