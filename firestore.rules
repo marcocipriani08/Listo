@@ -1,156 +1,20 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    function isValidUser(data) {
-      return data.keys().hasAll(['email', 'createdAt', 'updatedAt'])
-        && data.email is string && data.email.size() <= 256
-        && data.createdAt == request.time
-        && data.updatedAt == request.time
-        && (data.keys().hasOnly(['email', 'createdAt', 'updatedAt']) ||
-            (data.keys().hasAll(['familyId']) && data.familyId is string && data.familyId.size() <= 128 && data.keys().hasOnly(['email', 'createdAt', 'updatedAt', 'familyId', 'name']) && (!data.keys().hasAny(['name']) || (data.name is string && data.name.size() <= 128)))
-           );
-    }
-    
-    // Actually simpler isValidUser:
-    function isValidUserUpdate(data) {
-      return data.keys().hasAll(['email', 'createdAt', 'updatedAt'])
-        && data.email is string && data.email.size() <= 256
-        && data.createdAt is timestamp
-        && data.updatedAt == request.time
-        && ((!data.keys().hasAny(['familyId'])) || (data.familyId is string && data.familyId.size() <= 128))
-        && ((!data.keys().hasAny(['name'])) || (data.name is string && data.name.size() <= 128))
-        && ((!data.keys().hasAny(['joinedFamilies'])) || (data.joinedFamilies is list));
-    }
-
-    function isValidFamilyCreate(data) {
-      return data.keys().hasAll(['name', 'ownerId', 'createdAt'])
-        && data.name is string && data.name.size() > 0 && data.name.size() <= 128
-        && data.ownerId is string && data.ownerId == request.auth.uid
-        && data.createdAt == request.time
-        && ((!data.keys().hasAny(['password'])) || (data.password is string && data.password.size() <= 128));
-    }
-
-    function isValidItemCreate(data) {
-      return data.keys().hasAll(['title', 'categoryId', 'quantity', 'completed', 'addedBy', 'createdAt', 'updatedAt'])
-        && data.keys().size() == 7
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 256
-        && data.categoryId is string && data.categoryId.size() <= 128
-        && data.quantity is number && data.quantity >= 0
-        && data.completed is bool
-        && data.addedBy is string && data.addedBy == request.auth.uid
-        && data.createdAt == request.time
-        && data.updatedAt == request.time;
-    }
-
-    function isValidItemUpdate(data) {
-      return data.keys().hasAll(['title', 'categoryId', 'quantity', 'completed', 'addedBy', 'createdAt', 'updatedAt'])
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 256
-        && data.categoryId is string && data.categoryId.size() <= 128
-        && data.quantity is number && data.quantity >= 0
-        && data.completed is bool
-        && data.addedBy is string
-        && data.createdAt is timestamp
-        && data.updatedAt == request.time;
-    }
-
-    function isValidHistoryCreate(data) {
-      return data.keys().hasAll(['title', 'categoryId', 'count', 'updatedAt'])
-        && data.keys().size() == 4
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 256
-        && data.categoryId is string && data.categoryId.size() <= 128
-        && data.count is number && data.count >= 1
-        && data.updatedAt == request.time;
-    }
-
-    function isValidHistoryUpdate(data) {
-        return data.keys().hasAll(['title', 'categoryId', 'count', 'updatedAt'])
-        && data.keys().size() == 4
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 256
-        && data.categoryId is string && data.categoryId.size() <= 128
-        && data.count is number && data.count >= 1
-        && data.updatedAt == request.time;
-    }
-
-    function isMemberOfFamily(familyId) {
-       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == familyId;
-    }
-
     match /users/{userId} {
-      allow get: if isSignedIn() && request.auth.uid == userId;
-      allow list: if false;
-      allow create: if isSignedIn() 
-        && request.auth.uid == userId 
-        && isValidUserUpdate(incoming())
-        && incoming().createdAt == request.time;
-      allow update: if isSignedIn() 
-        && request.auth.uid == userId 
-        && isValidUserUpdate(incoming())
-        && incoming().createdAt == existing().createdAt
-        && incoming().email == existing().email
-        && incoming().diff(existing()).affectedKeys().hasOnly(['familyId', 'name', 'joinedFamilies', 'updatedAt']);
-      allow delete: if false;
+      // Un utente può leggere/scrivere solo il proprio profilo
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-
     match /families/{familyId} {
-      allow get: if isSignedIn(); // User needs to read it to join it (needs the name)
-      allow list: if false;
-      allow create: if isSignedIn()
-        && isValidId(familyId) 
-        && isValidFamilyCreate(incoming());
+      // Chiunque sia autenticato può leggere e scrivere nei gruppi famiglia
+      allow read, write: if request.auth != null;
       
-      allow update: if isSignedIn()
-        && incoming().diff(existing()).affectedKeys().hasOnly(['password', 'name', 'updatedAt']);
-      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
-
+      // Regole per le sottocollezioni items e history
       match /items/{itemId} {
-        allow get, list: if isSignedIn() && isMemberOfFamily(familyId);
-        allow create: if isSignedIn() 
-          && isMemberOfFamily(familyId)
-          && isValidId(itemId)
-          && isValidItemCreate(incoming());
-        allow update: if isSignedIn()
-          && isMemberOfFamily(familyId)
-          && isValidId(itemId)
-          && isValidItemUpdate(incoming())
-          && incoming().createdAt == existing().createdAt
-          && incoming().addedBy == existing().addedBy
-          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'categoryId', 'quantity', 'completed', 'updatedAt']);
-        allow delete: if isSignedIn() && (isMemberOfFamily(familyId) || get(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid);
+        allow read, write: if request.auth != null;
       }
-
       match /history/{historyId} {
-        allow get, list: if isSignedIn() && isMemberOfFamily(familyId);
-        allow create: if isSignedIn() 
-          && isMemberOfFamily(familyId)
-          && isValidId(historyId)
-          && isValidHistoryCreate(incoming());
-        allow update: if isSignedIn()
-          && isMemberOfFamily(familyId)
-          && isValidId(historyId)
-          && isValidHistoryUpdate(incoming())
-          && incoming().diff(existing()).affectedKeys().hasOnly(['count', 'categoryId', 'updatedAt']);
-        allow delete: if isSignedIn() && (isMemberOfFamily(familyId) || get(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid);
+        allow read, write: if request.auth != null;
       }
     }
   }

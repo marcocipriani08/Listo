@@ -264,7 +264,7 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
     setLoading(true);
     setError('');
     try {
-      const success = await joinFamily(userId, code.trim().toLowerCase(), joinPassword);
+      const success = await joinFamily(userId, code.trim().toLowerCase(), joinPassword.trim());
       if (!success) setError('Codice famiglia non trovato.');
       else { setCode(''); setJoinPassword(''); setIsDrawerOpen(false); setActiveForm(null); if(profile?.familyId) onClose(); }
     } catch (err: any) {
