@@ -1,10 +1,9 @@
 {
-  "projectId": "sound-sanctuary-zmvz5",
-  "appId": "1:893398928748:web:3b5fae2aa7135ad78d7749",
-  "apiKey": "AIzaSyAFyAY6IIlEDsbslSF6RwyrcnM5mCYeVrY",
-  "authDomain": "sound-sanctuary-zmvz5.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-b67a4248-ffcb-4084-9168-333ed8c9ddef",
-  "storageBucket": "sound-sanctuary-zmvz5.firebasestorage.app",
-  "messagingSenderId": "893398928748",
-  "measurementId": ""
+  "projectId": "listo-518dc",
+  "appId": "1:88867672578:web:34b9ec04674348e39b8d1b",
+  "apiKey": "AIzaSyArWQfzVOTXl5XAYhdiGeesn1iKJYNg5qg",
+  "authDomain": "listo-518dc.firebaseapp.com",
+  "storageBucket": "listo-518dc.firebasestorage.app",
+  "messagingSenderId": "88867672578",
+  "measurementId": "G-VS7BB9Q4F4"
 }

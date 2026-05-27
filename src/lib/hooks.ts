@@ -14,13 +14,26 @@ export function useUserProfile(userId: string | undefined) {
       setLoading(false);
       return;
     }
-    const unsubscribe = onSnapshot(doc(db, 'users', userId), (docSnap) => {
+    const unsubscribe = onSnapshot(doc(db, 'users', userId), async (docSnap) => {
       if (docSnap.exists()) {
         setProfile({ id: docSnap.id, ...docSnap.data() } as UserProfile);
+        setLoading(false);
       } else {
-        setProfile(null);
+        // Automatically create basic user profile in Firestore
+        try {
+          const userRef = doc(db, 'users', userId);
+          await setDoc(userRef, {
+            email: auth.currentUser?.email || '',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          // This setDoc will trigger onSnapshot again immediately
+        } catch (error) {
+          console.error("Errore durante la creazione del profilo utente:", error);
+          setProfile(null);
+          setLoading(false);
+        }
       }
-      setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.GET, `users/${userId}`));
     return () => unsubscribe();
   }, [userId]);

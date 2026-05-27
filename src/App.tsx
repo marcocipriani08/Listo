@@ -109,10 +109,12 @@ function LoginView() {
     } catch (e: any) {
       console.error(e);
       let message = "Errore durante l'autenticazione.";
-      if (e?.code === 'auth/user-not-found' || e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential') {
+      if (e?.code === 'auth/operation-not-allowed' || (e?.message && e.message.includes('operation-not-allowed'))) {
+        message = "Metodo di accesso tramite e-mail/password non abilitato! Abilitalo sotto 'Sign-in method' in Firebase Console.";
+      } else if (e?.code === 'auth/user-not-found' || e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential') {
         message = "Email o password non corrette.";
       } else if (e?.code === 'auth/email-already-in-use') {
-        message = "Questa email è già registrata. Accedi o reimposta la password.";
+        message = "Questa email è già registrata. Accedi o registra un account differente.";
       } else if (e?.code === 'auth/invalid-email') {
         message = "Questo indirizzo email non è valido.";
       } else if (e?.message) {
@@ -213,6 +215,11 @@ function LoginView() {
             {error.includes('Dominio non autorizzato') && (
               <p className="mt-3 text-xs text-slate-600 bg-white/70 p-2.5 rounded-xl border border-slate-100 leading-normal">
                 👉 Vai su <a href="https://console.firebase.google.com/project/sound-sanctuary-zmvz5/authentication/settings" target="_blank" rel="noopener noreferrer" className="underline font-bold text-emerald-600 hover:text-emerald-700">Firebase Console (Settings)</a>, clicca su <strong>Domini autorizzati</strong> &gt; <strong>Aggiungi dominio</strong> e inserisci: <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded font-mono text-[11px] font-bold">marcocipriani08.github.io</code>
+              </p>
+            )}
+            {error.includes('non abilitato') && (
+              <p className="mt-3 text-xs text-slate-600 bg-white/70 p-2.5 rounded-xl border border-slate-100 leading-normal">
+                👉 Vai su <a href="https://console.firebase.google.com/project/sound-sanctuary-zmvz5/authentication/providers" target="_blank" rel="noopener noreferrer" className="underline font-bold text-emerald-600 hover:text-emerald-700">Firebase Console (Sign-in Method)</a>, sotto <strong>Sign-in providers</strong> clicca su <strong>Aggiungi nuovo provider</strong> ed abilita <strong>E-mail/Password</strong>.
               </p>
             )}
           </div>
