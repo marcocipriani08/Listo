@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { auth, loginWithGoogle, logout, loginWithEmail, registerWithEmail } from './lib/firebase';
-import { useUserProfile, useShoppingList, useShoppingHistory, addShoppingItem, updateItemQuantity, toggleItemCompleted, clearCompletedItems, createFamily, joinFamily, useJoinedFamilies, leaveFamily, deleteFamily, useFamily, updateFamily } from './lib/hooks';
+import { auth, loginWithGoogle, logout, loginWithEmail, registerWithEmail, sendPasswordResetEmail } from './lib/firebase';
+import { useUserProfile, useShoppingList, useShoppingHistory, addShoppingItem, updateItemQuantity, toggleItemCompleted, clearCompletedItems, createFamily, joinFamily, useJoinedFamilies, leaveFamily, deleteFamily, useFamily, updateFamily, useUserInvitations, acceptInvitation, declineInvitation, inviteUser } from './lib/hooks';
 import { CATEGORIES, ShoppingItem, Family, UserProfile } from './types';
-import { Apple, Milk, Beef, Croissant, Wine, Package, Sparkles, ShoppingBag, Plus, Check, Trash2, LogOut, Loader2, Sparkles as SparklesIcon, CheckCircle2, ChevronLeft, Lock, LogIn, MoreVertical, Edit2, KeyRound, X } from 'lucide-react';
+import { Apple, Milk, Beef, Croissant, Wine, Package, Sparkles, ShoppingBag, Plus, Check, Trash2, LogOut, Loader2, Sparkles as SparklesIcon, CheckCircle2, ChevronLeft, Lock, LogIn, MoreVertical, Edit2, KeyRound, X, User, Bell, MailOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -26,7 +26,7 @@ export default function App() {
   const [user, setUser] = useState(auth.currentUser);
   const [authLoading, setAuthLoading] = useState(true);
   const { profile, loading: profileLoading, updateProfile } = useUserProfile(user?.uid);
-  const [forceSetup, setForceSetup] = useState(false);
+  const [forceSetup, setForceSetup] = useState(true);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => {
@@ -256,8 +256,17 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
   const [activeForm, setActiveForm] = useState<'create' | 'join' | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [confirmModals, setConfirmModals] = useState<{ type: 'leave' | 'delete', fam: Family } | null>(null);
+  const [modalType, setModalType] = useState<'profile' | 'notifications' | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editProfileName, setEditProfileName] = useState(profile?.name || '');
+
+  // Sync profile.name to state when profile loads
+  useEffect(() => {
+    if (profile?.name) setEditProfileName(profile.name);
+  }, [profile?.name]);
   
   const { families: joinedFamilies, loading: familiesLoading } = useJoinedFamilies(profile?.joinedFamilies);
+  const { invitations } = useUserInvitations(auth.currentUser?.email);
 
   const handleJoin = async () => {
     if (!code.trim()) return;
@@ -330,12 +339,23 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
       <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 p-4 lg:px-8 flex items-center justify-center z-10 shadow-sm shrink-0">
         <div className="w-full max-w-4xl flex justify-between items-center">
             <ListoLogo />
-            <button 
-               onClick={() => { setIsDrawerOpen(true); setActiveForm('join'); }}
-               className="bg-emerald-500 text-white rounded-full px-4 py-2 font-bold text-sm shadow-sm hover:bg-emerald-600 active:scale-95 transition-all flex items-center gap-2"
-            >
-              <Plus size={16} /> Aggiungi
-            </button>
+            <div className="flex gap-2 items-center">
+               <button onClick={() => setModalType('profile')} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 bg-white border-2 border-slate-200 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95">
+                  <User size={20} strokeWidth={2.5} />
+               </button>
+               <button onClick={() => setModalType('notifications')} className="relative w-10 h-10 rounded-full flex items-center justify-center text-slate-700 bg-white border-2 border-slate-200 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95">
+                  <Bell size={20} strokeWidth={2.5} />
+                  {invitations.length > 0 && (
+                     <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full ring-2 ring-white"></span>
+                  )}
+               </button>
+               <button 
+                  onClick={() => { setIsDrawerOpen(true); setActiveForm('join'); }}
+                  className="bg-emerald-500 text-white rounded-full px-4 py-2 font-bold text-sm shadow-sm hover:bg-emerald-600 active:scale-95 transition-all flex items-center gap-2"
+               >
+                 <Plus size={16} /> Aggiungi
+               </button>
+            </div>
         </div>
       </header>
 
@@ -379,10 +399,6 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
               </div>
             )}
           </div>
-
-          <button onClick={() => logout()} className="text-slate-500 w-full text-center py-4 font-bold text-sm hover:text-slate-900 transition-colors mt-8">
-            Esci dall'account
-          </button>
         </div>
       </main>
 
@@ -550,6 +566,153 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
             </div>
          )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {modalType === 'profile' && (
+           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl space-y-4">
+                 <h3 className="font-bold text-lg text-slate-800">Il tuo Profilo</h3>
+                 
+                 <div className="space-y-4 pt-2">
+                    <div>
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Il tuo Nome (Opzionale)</p>
+                       <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={editProfileName}
+                            onChange={(e) => setEditProfileName(e.target.value)}
+                            placeholder="Inserisci un nome..."
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-colors"
+                          />
+                          <button
+                            onClick={async () => {
+                              try {
+                                setIsUpdating(true);
+                                await updateProfile({ name: editProfileName });
+                              } catch (e: any) {
+                                alert('Errore: ' + e.message);
+                              } finally {
+                                setIsUpdating(false);
+                              }
+                            }}
+                            disabled={isUpdating || editProfileName === profile?.name}
+                            className="bg-slate-900 text-white px-4 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 hover:bg-slate-800 active:scale-95 transition-all"
+                          >
+                            Salva
+                          </button>
+                       </div>
+                    </div>
+                    
+                    <div>
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Email</p>
+                       <p className="font-medium text-slate-900">{auth.currentUser?.email}</p>
+                    </div>
+                    
+                    <button
+                       onClick={async () => {
+                          try {
+                            setIsUpdating(true);
+                            await sendPasswordResetEmail(auth.currentUser?.email || '');
+                            alert('Ti abbiamo inviato un\'email per reimpostare la password.');
+                          } catch (e: any) {
+                            alert('Errore: ' + e.message);
+                          } finally {
+                            setIsUpdating(false);
+                          }
+                       }}
+                       disabled={isUpdating}
+                       className="w-full py-3 px-4 flex items-center gap-2 justify-center rounded-xl font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                    >
+                       <KeyRound size={18} />
+                       Cambia password
+                    </button>
+                    
+                    <div className="h-px bg-slate-100 w-full my-4" />
+                    
+                    <button
+                       onClick={() => logout()}
+                       className="w-full py-3 px-4 flex items-center gap-2 justify-center rounded-xl font-bold bg-slate-50 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                    >
+                       <LogOut size={18} />
+                       Esci dall'account
+                    </button>
+                 </div>
+                 
+                 <div className="pt-2">
+                    <button
+                       onClick={() => setModalType(null)}
+                       className="w-full py-3 px-4 rounded-xl font-bold bg-slate-900 text-white hover:bg-slate-800 active:scale-95 transition-all"
+                    >
+                       Chiudi
+                    </button>
+                 </div>
+              </motion.div>
+           </div>
+        )}
+        {modalType === 'notifications' && (
+           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl space-y-4 max-h-[80vh] flex flex-col">
+                 <h3 className="font-bold text-lg text-slate-800">Notifiche</h3>
+                 
+                 <div className="flex-1 overflow-y-auto space-y-3 pt-2">
+                    {invitations.length === 0 ? (
+                       <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-2xl">Non hai nessuna notifica al momento.</p>
+                    ) : (
+                       invitations.map(inv => (
+                          <div key={inv.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-3">
+                             <div className="flex items-start gap-3">
+                                <MailOpen className="text-emerald-500 shrink-0" size={20} />
+                                <div>
+                                   <p className="text-sm text-slate-800">
+                                      <span className="font-bold">{inv.fromUserEmail}</span> ti ha invitato ad unirti alla famiglia <span className="font-bold">{inv.familyName}</span>
+                                   </p>
+                                </div>
+                             </div>
+                             <div className="flex gap-2 mt-1">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      setIsUpdating(true);
+                                      await acceptInvitation(userId, inv.id, inv.familyId);
+                                    } catch(e: any) { alert(e.message); }
+                                    finally { setIsUpdating(false); }
+                                  }}
+                                  disabled={isUpdating}
+                                  className="flex-1 bg-emerald-500 text-white rounded-xl py-2 font-bold text-sm hover:bg-emerald-600 transition-colors"
+                                >
+                                  Accetta
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      setIsUpdating(true);
+                                      await declineInvitation(inv.id);
+                                    } catch(e: any) { alert(e.message); }
+                                    finally { setIsUpdating(false); }
+                                  }}
+                                  disabled={isUpdating}
+                                  className="flex-1 bg-white border border-slate-200 text-slate-600 rounded-xl py-2 font-bold text-sm hover:bg-slate-50 transition-colors"
+                                >
+                                  Rifiuta
+                                </button>
+                             </div>
+                          </div>
+                       ))
+                    )}
+                 </div>
+                 
+                 <div className="pt-2 shrink-0">
+                    <button
+                       onClick={() => setModalType(null)}
+                       className="w-full py-3 px-4 rounded-xl font-bold bg-slate-900 text-white hover:bg-slate-800 active:scale-95 transition-all"
+                    >
+                       Chiudi
+                    </button>
+                 </div>
+              </motion.div>
+           </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -569,8 +732,9 @@ function ShoppingListView({ familyId, userId, onChangeFamily }: { familyId: stri
   const [input, setInput] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [modalType, setModalType] = useState<'rename' | 'password' | null>(null);
+  const [modalType, setModalType] = useState<'rename' | 'password' | 'profile' | 'invite' | null>(null);
   const [renameInput, setRenameInput] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
   const touchStartX = useRef<number | null>(null);
@@ -655,24 +819,30 @@ function ShoppingListView({ familyId, userId, onChangeFamily }: { familyId: stri
                 <MoreVertical size={22} strokeWidth={2.5} />
              </button>
              {menuOpen && (
-                <>
-                   <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                   <div className="absolute right-0 top-10 w-48 bg-white rounded-2xl shadow-xl shadow-slate-900/10 border border-slate-100 z-50 overflow-hidden py-1">
-                      <button 
-                         onClick={() => { setMenuOpen(false); setRenameInput(family?.name || ''); setModalType('rename'); }} 
-                         className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-                      >
-                         <Edit2 size={14} className="text-slate-400" /> Rinomina gruppo
-                      </button>
-                      <button 
-                         onClick={() => { setMenuOpen(false); setModalType('password'); }} 
-                         className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-                      >
-                         <KeyRound size={14} className="text-slate-400" /> Mostra password
-                      </button>
-                   </div>
-                </>
-             )}
+                  <>
+                     <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                     <div className="absolute right-0 top-10 w-48 bg-white rounded-2xl shadow-xl shadow-slate-900/10 border border-slate-100 z-50 overflow-hidden py-1">
+                        <button 
+                           onClick={() => { setMenuOpen(false); setRenameInput(family?.name || ''); setModalType('rename'); }} 
+                           className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                        >
+                           <Edit2 size={14} className="text-slate-400" /> Rinomina gruppo
+                        </button>
+                        <button 
+                           onClick={() => { setMenuOpen(false); setModalType('invite'); }} 
+                           className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                        >
+                           <MailOpen size={14} className="text-slate-400" /> Invita un utente
+                        </button>
+                        <button 
+                           onClick={() => { setMenuOpen(false); setModalType('password'); }} 
+                           className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                        >
+                           <KeyRound size={14} className="text-slate-400" /> Mostra password
+                        </button>
+                     </div>
+                  </>
+               )}
           </div>
         </header>
 
@@ -864,6 +1034,50 @@ function ShoppingListView({ familyId, userId, onChangeFamily }: { familyId: stri
                        className="w-full py-3 px-4 rounded-xl font-bold bg-slate-900 text-white hover:bg-slate-800 active:scale-95 transition-all"
                     >
                        Chiudi
+                    </button>
+                 </div>
+              </motion.div>
+           </div>
+        )}
+        {modalType === 'invite' && (
+           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl space-y-4">
+                 <h3 className="font-bold text-lg text-slate-800">Invita un utente</h3>
+                 <p className="text-slate-500 text-sm">Inserisci l'email dell'utente che vuoi invitare in questo gruppo.</p>
+                 <input 
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
+                 />
+                 <div className="flex gap-2 pt-2">
+                    <button
+                       onClick={() => { setModalType(null); setInviteEmail(''); }}
+                       className="flex-1 py-3 px-4 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95 transition-colors"
+                       disabled={isUpdating}
+                    >
+                       Annulla
+                    </button>
+                    <button
+                       onClick={async () => {
+                          if (!inviteEmail.trim() || !family) return;
+                          try {
+                             setIsUpdating(true);
+                             await inviteUser(family.id, family.name, auth.currentUser?.email || '', inviteEmail.trim().toLowerCase());
+                             setModalType(null);
+                             setInviteEmail('');
+                             alert('Invito inviato correttamente!');
+                          } catch (e: any) {
+                             alert('Errore: ' + e.message);
+                          } finally {
+                             setIsUpdating(false);
+                          }
+                       }}
+                       disabled={isUpdating || !inviteEmail.trim()}
+                       className="flex-1 py-3 px-4 flex items-center justify-center gap-2 rounded-xl font-bold bg-emerald-500 text-white hover:bg-emerald-600 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                       {isUpdating ? <Loader2 size={18} className="animate-spin" /> : 'Invia invito'}
                     </button>
                  </div>
               </motion.div>

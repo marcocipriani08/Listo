@@ -35,6 +35,16 @@ export interface ShoppingHistory {
   updatedAt: Date | any;
 }
 
+export interface Invitation {
+  id: string;
+  familyId: string;
+  familyName: string;
+  fromUserEmail: string;
+  toUserEmail: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: Date | any;
+}
+
 export const CATEGORIES = [
   { id: 'fruit', label: 'Frutta & Verdura', icon: 'Apple' },
   { id: 'dairy', label: 'Latticini & Uova', icon: 'Milk' },

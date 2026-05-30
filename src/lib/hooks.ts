@@ -379,3 +379,84 @@ export async function deleteFamily(userId: string, familyId: string) {
     throw error;
   }
 }
+
+export function useUserInvitations(userEmail: string | undefined | null) {
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userEmail) {
+      setInvitations([]);
+      setLoading(false);
+      return;
+    }
+    const q = query(
+      collection(db, 'invitations'),
+      // we need where('toUserEmail', '==', userEmail) and where('status', '==', 'pending')
+      // but without composite indexes maybe just fetch by toUserEmail and filter in memory
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const invs = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((inv: any) => inv.toUserEmail === userEmail && inv.status === 'pending')
+        .sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      setInvitations(invs);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching invitations', error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [userEmail]);
+
+  return { invitations, loading };
+}
+
+export async function inviteUser(familyId: string, familyName: string, fromUserEmail: string, toUserEmail: string) {
+  try {
+    const newInvRef = doc(collection(db, 'invitations'));
+    await setDoc(newInvRef, {
+      familyId,
+      familyName,
+      fromUserEmail,
+      toUserEmail,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'invitations');
+    throw error;
+  }
+}
+
+export async function acceptInvitation(userId: string, invitationId: string, familyId: string) {
+  try {
+    // 1. Mark invitation as accepted
+    await updateDoc(doc(db, 'invitations', invitationId), { status: 'accepted' });
+    
+    // 2. Add family to user
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      const joinedFamilies = Array.from(new Set([...(data.joinedFamilies || []), familyId]));
+      await updateDoc(userRef, { 
+        joinedFamilies, 
+        familyId: data.familyId || familyId, // switch to it if they have none
+        updatedAt: serverTimestamp() 
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `invitations/${invitationId}`);
+    throw error;
+  }
+}
+
+export async function declineInvitation(invitationId: string) {
+  try {
+    await updateDoc(doc(db, 'invitations', invitationId), { status: 'declined' });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `invitations/${invitationId}`);
+    throw error;
+  }
+}
