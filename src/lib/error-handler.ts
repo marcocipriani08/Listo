@@ -26,7 +26,7 @@ export interface FirestoreErrorInfo {
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null, shouldThrow = true) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? (error as any).code || error.message : String(error),
     authInfo: {
@@ -45,11 +45,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   
-  if (error instanceof Error) {
-     if ((error as any).code === 'permission-denied') {
-        throw new Error('Operazione negata. Riprovare o verificare i permessi.');
-     }
-     throw error;
+  if (shouldThrow) {
+    if (error instanceof Error) {
+       if ((error as any).code === 'permission-denied') {
+          throw new Error('Operazione negata. Riprovare o verificare i permessi.');
+       }
+       throw error;
+    }
+    throw new Error(String(error));
   }
-  throw new Error(String(error));
 }

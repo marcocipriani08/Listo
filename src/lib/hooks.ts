@@ -14,6 +14,7 @@ export function useUserProfile(userId: string | undefined) {
       setLoading(false);
       return;
     }
+    setLoading(true);
     const unsubscribe = onSnapshot(doc(db, 'users', userId), async (docSnap) => {
       if (docSnap.exists()) {
         setProfile({ id: docSnap.id, ...docSnap.data() } as UserProfile);
@@ -34,7 +35,11 @@ export function useUserProfile(userId: string | undefined) {
           setLoading(false);
         }
       }
-    }, (error) => handleFirestoreError(error, OperationType.GET, `users/${userId}`));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `users/${userId}`, false);
+      setProfile(null);
+      setLoading(false);
+    });
     return () => unsubscribe();
   }, [userId]);
 
@@ -60,6 +65,7 @@ export function useShoppingList(familyId: string | undefined) {
       setLoading(false);
       return;
     }
+    setLoading(true);
     const q = query(
       collection(db, 'families', familyId, 'items'),
       orderBy('createdAt', 'desc')
@@ -67,7 +73,11 @@ export function useShoppingList(familyId: string | undefined) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShoppingItem)));
       setLoading(false);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, `families/${familyId}/items`));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `families/${familyId}/items`, false);
+      setItems([]);
+      setLoading(false);
+    });
     return () => unsubscribe();
   }, [familyId]);
 
@@ -151,7 +161,10 @@ export function useShoppingHistory(familyId: string | undefined) {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setHistory(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShoppingHistory)));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, `families/${familyId}/history`));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `families/${familyId}/history`, false);
+      setHistory([]);
+    });
     return () => unsubscribe();
   }, [familyId]);
 
