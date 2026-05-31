@@ -398,7 +398,7 @@ export function useUserInvitations(userEmail: string | undefined | null) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const invs = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((inv: any) => inv.toUserEmail === userEmail && inv.status === 'pending')
+        .filter((inv: any) => inv.toUserEmail?.toLowerCase() === userEmail.toLowerCase() && inv.status === 'pending')
         .sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
       setInvitations(invs);
       setLoading(false);

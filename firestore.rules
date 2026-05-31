@@ -1,7 +1,24 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+    match /users/{userId} {
+      // Un utente può leggere/scrivere solo il proprio profilo
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /families/{familyId} {
+      // Chiunque sia autenticato può leggere e scrivere nei gruppi famiglia
+      allow read, write: if request.auth != null;
+      
+      // Regole per le sottocollezioni items e history
+      match /items/{itemId} {
+        allow read, write: if request.auth != null;
+      }
+      match /history/{historyId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+    match /invitations/{invitationId} {
+      // Chiunque sia autenticato può leggere e scrivere inviti
       allow read, write: if request.auth != null;
     }
   }

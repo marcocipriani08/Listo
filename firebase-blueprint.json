@@ -50,6 +50,20 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["title", "categoryId", "count", "updatedAt"]
+    },
+    "Invitation": {
+      "title": "Invitation",
+      "description": "An invitation to join a family group",
+      "type": "object",
+      "properties": {
+        "familyId": { "type": "string" },
+        "familyName": { "type": "string" },
+        "fromUserEmail": { "type": "string" },
+        "toUserEmail": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["familyId", "familyName", "fromUserEmail", "toUserEmail", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -68,6 +82,10 @@
     "/families/{familyId}/history/{historyId}": {
       "schema": { "$ref": "#/entities/History" },
       "description": "Shopping history for a family"
+    },
+    "/invitations/{invitationId}": {
+      "schema": { "$ref": "#/entities/Invitation" },
+      "description": "Group invitations"
     }
   }
 }
