@@ -1405,7 +1405,7 @@ function ItemRow({ item, familyId, isCompleted = false, key }: { item: ShoppingI
             
             <div className="flex-1 min-w-0 cursor-pointer" onClick={handleToggle}>
                <p className={cn(
-                 "text-sm font-semibold truncate transition-all text-white", 
+                 "text-sm font-semibold break-words whitespace-normal leading-snug transition-all text-white pr-1", 
                  item.completed && "line-through text-slate-500 font-light"
                )}>
                   {item.title}
