@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, loginWithGoogle, logout, loginWithEmail, registerWithEmail, sendPasswordResetEmail } from './lib/firebase';
-import { useUserProfile, useShoppingList, useShoppingHistory, addShoppingItem, updateItemQuantity, toggleItemCompleted, clearCompletedItems, createFamily, joinFamily, useJoinedFamilies, leaveFamily, deleteFamily, useFamily, updateFamily, useUserInvitations, acceptInvitation, declineInvitation, inviteUser } from './lib/hooks';
+import { useOnlineStatus, useUserProfile, useShoppingList, useShoppingHistory, addShoppingItem, updateItemQuantity, toggleItemCompleted, clearCompletedItems, createFamily, joinFamily, useJoinedFamilies, leaveFamily, deleteFamily, useFamily, updateFamily, useUserInvitations, acceptInvitation, declineInvitation, inviteUser } from './lib/hooks';
 import { CATEGORIES, ShoppingItem, Family, UserProfile, guessCategory } from './types';
 import { 
   Apple, Milk, Beef, Croissant, Wine, Package, Sparkles, ShoppingBag, 
   Plus, Check, Trash2, LogOut, Loader2, Sparkles as SparklesIcon, 
   CheckCircle2, ChevronLeft, Lock, LogIn, MoreVertical, Edit2, 
-  KeyRound, X, User, Bell, MailOpen, Layers, Users, ShieldAlert, ArrowRight, Share2 
+  KeyRound, X, User, Bell, MailOpen, Layers, Users, ShieldAlert, ArrowRight, Share2,
+  Wifi, WifiOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -41,6 +42,26 @@ export default function App() {
     return unsub;
   }, []);
 
+  // Back button synchronization for mobile/browser
+  useEffect(() => {
+    if (!profile?.familyId) return;
+
+    if (!forceSetup) {
+      if (window.history.state?.view !== 'list') {
+        window.history.pushState({ view: 'list' }, '');
+      }
+
+      const handlePopState = (e: PopStateEvent) => {
+        setForceSetup(true);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [forceSetup, profile?.familyId]);
+
   if (authLoading) {
     return <LoadingView />;
   }
@@ -69,7 +90,13 @@ export default function App() {
     <ShoppingListView 
       familyId={profile.familyId} 
       userId={user.uid} 
-      onChangeFamily={() => setForceSetup(true)}
+      onChangeFamily={() => {
+        if (window.history.state?.view === 'list') {
+          window.history.back();
+        } else {
+          setForceSetup(true);
+        }
+      }}
     />
   );
 }
@@ -306,6 +333,7 @@ function LoginView() {
 }
 
 function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: string, profile: UserProfile | null, onClose: () => void, updateProfile: (data: Partial<UserProfile>) => void }) {
+  const isOnline = useOnlineStatus();
   const [code, setCode] = useState('');
   const [joinPassword, setJoinPassword] = useState('');
   const [name, setName] = useState('');
@@ -410,7 +438,14 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
 
       <header className="sticky top-0 bg-brand-dark/75 backdrop-blur-xl border-b border-white/5 p-4 lg:px-8 flex items-center justify-center z-30 shrink-0">
         <div className="w-full max-w-4xl flex justify-between items-center">
-          <ListoLogo />
+          <div className="flex items-center gap-2">
+            <ListoLogo />
+            {!isOnline && (
+              <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider animate-pulse select-none" title="Funzionamento offline attivo: le modifiche verranno salvate localmente">
+                <WifiOff size={10} className="stroke-[2.5]" /> Offline
+              </span>
+            )}
+          </div>
           <div className="flex gap-2.5 items-center">
             <button 
               onClick={() => setModalType('profile')} 
@@ -888,6 +923,7 @@ function FamilySetupView({ userId, profile, onClose, updateProfile }: { userId: 
 }
 
 function ShoppingListView({ familyId, userId, onChangeFamily }: { familyId: string, userId: string, onChangeFamily: () => void }) {
+  const isOnline = useOnlineStatus();
   const family = useFamily(familyId);
   const { items, loading } = useShoppingList(familyId);
   const history = useShoppingHistory(familyId);
@@ -972,10 +1008,15 @@ function ShoppingListView({ familyId, userId, onChangeFamily }: { familyId: stri
         {/* Header */}
         <header className="px-6 py-5 flex justify-between items-center z-30 bg-brand-dark/40 border-b border-white/5 shrink-0">
           <div className="flex flex-col flex-1 truncate pr-3">
-             <div className="flex items-center gap-2">
+             <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-display font-bold tracking-tight text-white truncate">
                   {family ? family.name : 'Listo'}
                 </h1>
+                {!isOnline && (
+                  <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider animate-pulse select-none shrink-0" title="Funzionamento offline attivo: le modifiche verranno salvate localmente">
+                    <WifiOff size={10} className="stroke-[2.5]" /> Offline
+                  </span>
+                )}
              </div>
              {family && (
                 <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
@@ -988,13 +1029,7 @@ function ShoppingListView({ familyId, userId, onChangeFamily }: { familyId: stri
           </div>
           
           <div className="relative shrink-0 flex items-center gap-2">
-             <button 
-               onClick={onChangeFamily}
-               className="h-10 px-3 cursor-pointer rounded-xl text-slate-300 hover:text-white border border-white/10 bg-white/5 text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95"
-               title="Indietro ai Gruppi"
-             >
-                <ChevronLeft size={16} /> <span className="hidden sm:inline">Gruppi</span>
-             </button>
+             
              
              <div className="relative">
                <button 
@@ -1122,6 +1157,15 @@ function ShoppingListView({ familyId, userId, onChangeFamily }: { familyId: stri
         <div className="p-5 bg-brand-dark/90 border-t border-white/5 shrink-0 z-30 relative flex flex-col gap-4">
           <form onSubmit={handleAdd} className="relative z-25 flex flex-col w-full">
             <div className="relative flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={onChangeFamily}
+                className="h-[52px] w-[52px] shrink-0 cursor-pointer rounded-2xl text-slate-300 hover:text-white border border-white/10 bg-brand-green/10 hover:bg-brand-green/20 hover:border-brand-neon/30 flex items-center justify-center transition-all active:scale-95 shadow-md"
+                title="Indietro ai Gruppi"
+              >
+                 <ChevronLeft size={22} className="stroke-[2.5]" />
+              </button>
+
               <div className="relative flex-1 flex items-center">
                 <input 
                   type="text" 
@@ -1353,7 +1397,7 @@ function ShoppingListView({ familyId, userId, onChangeFamily }: { familyId: stri
   );
 }
 
-function ItemRow({ item, familyId, isCompleted = false, key }: { item: ShoppingItem, familyId: string, isCompleted?: boolean, key?: React.Key }) {
+function ItemRow({ item, familyId, isCompleted = false }: { item: ShoppingItem, familyId: string, isCompleted?: boolean, key?: React.Key }) {
   const handleToggle = () => toggleItemCompleted(familyId, item.id, !item.completed);
   const inc = () => updateItemQuantity(familyId, item.id, item.quantity + 1);
   const dec = () => updateItemQuantity(familyId, item.id, item.quantity - 1);
@@ -1363,10 +1407,15 @@ function ItemRow({ item, familyId, isCompleted = false, key }: { item: ShoppingI
   return (
     <motion.div 
       layout
-      initial={{ opacity: 0, scale: 0.98, y: 5 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.18 }}
+      initial={{ opacity: 0, y: 15, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+      transition={{ 
+        type: "spring",
+        stiffness: 380,
+        damping: 26,
+        mass: 0.95
+      }}
     >
        <div 
         className={cn(
@@ -1404,14 +1453,17 @@ function ItemRow({ item, familyId, isCompleted = false, key }: { item: ShoppingI
             )}
             
             <div className="flex-1 min-w-0 cursor-pointer" onClick={handleToggle}>
-               <p className={cn(
-                 "text-sm font-semibold break-words whitespace-normal leading-snug transition-all text-white pr-1", 
-                 item.completed && "line-through text-slate-500 font-light"
-               )}>
+               <p 
+                 className={cn(
+                   "text-sm font-semibold break-words whitespace-normal leading-snug transition-all text-white pr-1 line-clamp-2 hover:line-clamp-none", 
+                   item.completed && "line-through text-slate-500 font-light"
+                 )}
+                 title={item.title}
+               >
                   {item.title}
                </p>
                {matchedCat && !isCompleted && (
-                 <span className="text-[9px] text-slate-400 font-medium tracking-wide">
+                 <span className="text-[9px] text-slate-400 font-medium tracking-wide block mt-0.5">
                    {matchedCat.label}
                  </span>
                )}

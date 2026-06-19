@@ -4,6 +4,25 @@ import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, updateDoc,
 import { handleFirestoreError, OperationType } from './error-handler';
 import { ShoppingItem, ShoppingHistory, UserProfile, Family, guessCategory } from '../types';
 
+export function useOnlineStatus() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return isOnline;
+}
+
 export function useUserProfile(userId: string | undefined) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
