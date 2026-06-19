@@ -70,3 +70,179 @@ body {
 .glow-btn:active:not(:disabled) {
   transform: scale(0.98);
 }
+
+/* Light mode customized semantic color values and global overrides */
+html.light, .light {
+  --color-brand-dark: #ffffff;
+  --color-brand-green: #03624c;
+  --color-brand-neon: #03624c;
+}
+
+.light body {
+  background-color: #ffffff;
+  color: #032a22;
+}
+
+/* Light mode specific glassmorphism styling overrides */
+.light .glass-panel {
+  background: rgba(240, 253, 250, 0.85) !important;
+  border-color: rgba(3, 98, 76, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(3, 98, 76, 0.05) !important;
+}
+
+.light .glass-panel-heavy {
+  background: rgba(254, 254, 255, 0.98) !important;
+  border-color: rgba(3, 98, 76, 0.1) !important;
+  box-shadow: 0 10px 40px rgba(2, 44, 34, 0.06) !important;
+}
+
+.light .glass-card {
+  background: rgba(240, 253, 250, 0.65) !important;
+  border-color: rgba(3, 98, 76, 0.08) !important;
+}
+
+.light .glass-card:hover {
+  background: rgba(240, 253, 250, 0.9) !important;
+  border-color: rgba(3, 98, 76, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(3, 98, 76, 0.08) !important;
+}
+
+/* Specific button style overrides for light mode */
+.light .glow-btn,
+.light .glow-btn.text-white {
+  background: linear-gradient(135deg, #022c22 0%, #03624c 100%) !important;
+  box-shadow: 0 4px 16px rgba(3, 98, 76, 0.22) !important;
+  color: #ffffff !important;
+}
+
+.light .glow-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 22px rgba(3, 98, 76, 0.35) !important;
+}
+
+.light .glow-btn *,
+.light .glow-btn.text-white * {
+  color: #ffffff !important;
+}
+
+/* Sub-text contrast styling adjustments */
+.light .text-white:not(.glow-btn):not(.glow-btn *) {
+  color: #022c22 !important;
+}
+
+.light .text-slate-100 {
+  color: #042f26 !important;
+}
+
+.light .text-slate-200 {
+  color: #0d3830 !important;
+}
+
+.light .text-slate-300 {
+  color: #1a332d !important;
+}
+
+.light .text-slate-450,
+.light .text-slate-400 {
+  color: #3b4f4b !important;
+}
+
+.light .text-slate-500 {
+  color: #556c67 !important;
+}
+
+/* Specific background and border adjustments for panels/modals */
+.light .bg-brand-dark\/90 {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+}
+
+.light .bg-brand-dark\/95 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+.light .bg-brand-dark\/75 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.light .bg-brand-dark\/50 {
+  background-color: rgba(241, 245, 249, 0.8) !important;
+}
+
+.light .bg-brand-dark\/40 {
+  background-color: rgba(241, 245, 249, 0.6) !important;
+}
+
+.light .bg-brand-dark {
+  background-color: #f8fafc !important;
+}
+
+.light .border-white\/5 {
+  border-color: rgba(3, 98, 76, 0.09) !important;
+}
+
+.light .border-white\/10 {
+  border-color: rgba(3, 98, 76, 0.14) !important;
+}
+
+.light .bg-white\/5 {
+  background-color: rgba(241, 245, 249, 0.8) !important;
+}
+
+.light .bg-white\/10 {
+  background-color: rgba(241, 245, 249, 1) !important;
+}
+
+.light .placeholder-slate-500::placeholder {
+  color: #78908c !important;
+}
+
+/* Category bubble & completion visual elements adjustments */
+.light .bg-brand-neon\/15 {
+  background-color: rgba(3, 98, 76, 0.08) !important;
+  color: #03624c !important;
+}
+
+.light .text-brand-neon {
+  color: #03624c !important;
+}
+
+.light .border-brand-neon\/40 {
+  border-color: rgba(3, 98, 76, 0.4) !important;
+}
+
+.light .border-brand-green\/15 {
+  border-color: rgba(3, 98, 76, 0.15) !important;
+}
+
+.light .bg-brand-green\/10 {
+  background-color: rgba(3, 98, 76, 0.05) !important;
+}
+
+.light .border-brand-green\/30 {
+  border-color: rgba(3, 98, 76, 0.2) !important;
+}
+
+.light .bg-brand-green\/5 {
+  background-color: rgba(3, 98, 76, 0.03) !important;
+}
+
+.light .bg-brand-green\/20 {
+  background-color: rgba(3, 98, 76, 0.1) !important;
+}
+
+.light .border-brand-neon\/20 {
+  border-color: rgba(3, 98, 76, 0.25) !important;
+}
+
+.light .border-brand-neon\/15 {
+  border-color: rgba(3, 98, 76, 0.2) !important;
+}
+
+.light .border-brand-neon {
+  border-color: #03624c !important;
+}
+
+.light .bg-brand-neon {
+  background-color: #03624c !important;
+  color: #ffffff !important;
+}
+
