@@ -29,12 +29,14 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 export default function App() {
-  const [user, setUser] = useState(auth.currentUser);
+  const [user, setUser] = useState(auth?.currentUser || null);
   const [authLoading, setAuthLoading] = useState(true);
   const { profile, loading: profileLoading, updateProfile } = useUserProfile(user?.uid);
   const [forceSetup, setForceSetup] = useState(true);
 
+  // Set up authentication observer immediately
   useEffect(() => {
+    if (!auth) return;
     const unsub = auth.onAuthStateChanged((u) => {
       setUser(u);
       setAuthLoading(false);
@@ -63,7 +65,7 @@ export default function App() {
   }, [forceSetup, profile?.familyId]);
 
   if (authLoading) {
-    return <LoadingView />;
+    return <LoadingView message="Verifica sessione..." />;
   }
 
   if (!user) {
@@ -132,7 +134,7 @@ function ListoLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   );
 }
 
-function LoadingView() {
+function LoadingView({ message = "Sincronizzazione..." }: { message?: string }) {
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-dark relative overflow-hidden">
       {/* Glow Ambient Blobs */}
@@ -143,7 +145,7 @@ function LoadingView() {
         <ListoLogo size="lg" />
         <div className="flex items-center gap-2 text-brand-neon/80 font-mono text-xs tracking-wider uppercase mt-4">
           <Loader2 className="animate-spin text-brand-neon" size={18} />
-          <span>Sincronizzazione...</span>
+          <span>{message}</span>
         </div>
       </div>
     </div>
