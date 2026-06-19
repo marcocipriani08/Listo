@@ -33,6 +33,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const { profile, loading: profileLoading, updateProfile } = useUserProfile(user?.uid);
   const [forceSetup, setForceSetup] = useState(true);
+  const [autoOpenAddGroup, setAutoOpenAddGroup] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
   });
@@ -99,6 +100,8 @@ export default function App() {
         updateProfile={updateProfile} 
         theme={theme}
         setTheme={setTheme}
+        autoOpenAddGroup={autoOpenAddGroup}
+        onCloseAddGroup={() => setAutoOpenAddGroup(false)}
       />
     );
   }
@@ -117,6 +120,10 @@ export default function App() {
         } else {
           setForceSetup(true);
         }
+      }}
+      onAddFamily={() => {
+        setAutoOpenAddGroup(true);
+        setForceSetup(true);
       }}
     />
   );
@@ -359,14 +366,18 @@ function FamilySetupView({
   onClose, 
   updateProfile,
   theme,
-  setTheme
+  setTheme,
+  autoOpenAddGroup,
+  onCloseAddGroup
 }: { 
   userId: string, 
   profile: UserProfile | null, 
   onClose: () => void, 
   updateProfile: (data: Partial<UserProfile>) => void,
   theme: 'light' | 'dark',
-  setTheme: (t: 'light' | 'dark') => void
+  setTheme: (t: 'light' | 'dark') => void,
+  autoOpenAddGroup?: boolean,
+  onCloseAddGroup?: () => void
 }) {
   const isOnline = useOnlineStatus();
   const [code, setCode] = useState('');
@@ -381,6 +392,16 @@ function FamilySetupView({
   const [modalType, setModalType] = useState<'profile' | 'notifications' | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editProfileName, setEditProfileName] = useState(profile?.name || '');
+
+  useEffect(() => {
+    if (autoOpenAddGroup) {
+      setIsDrawerOpen(true);
+      setActiveForm('join');
+      if (onCloseAddGroup) {
+        onCloseAddGroup();
+      }
+    }
+  }, [autoOpenAddGroup, onCloseAddGroup]);
 
   useEffect(() => {
     if (profile?.name) setEditProfileName(profile.name);
@@ -1140,6 +1161,7 @@ function ShoppingListView({
   familyId, 
   userId, 
   onChangeFamily,
+  onAddFamily,
   profile,
   updateProfile,
   theme,
@@ -1148,6 +1170,7 @@ function ShoppingListView({
   familyId: string;
   userId: string;
   onChangeFamily: () => void;
+  onAddFamily: () => void;
   profile: UserProfile | null;
   updateProfile: (data: Partial<UserProfile>) => void;
   theme: 'light' | 'dark';
@@ -1271,7 +1294,7 @@ function ShoppingListView({
               )}
             </button>
             <button 
-              onClick={onChangeFamily}
+              onClick={onAddFamily}
               className="glow-btn text-white rounded-xl px-4 py-2 text-xs uppercase tracking-wider font-bold shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Plus size={14} strokeWidth={3} /> Aggiungi
@@ -1375,6 +1398,7 @@ function ShoppingListView({
                 <p className="text-[10px] font-bold text-brand-neon uppercase tracking-widest">Articoli da Comprare</p>
                 {!loading && items.length > 0 && (
                   <button
+                     id="select-all-btn"
                      onClick={() => activeItems.forEach(i => toggleItemCompleted(familyId, i.id, true))}
                      className="text-[9px] font-bold text-brand-neon uppercase tracking-widest px-2.5 py-1 bg-brand-neon/10 hover:bg-brand-neon/20 hover:text-white rounded-lg active:scale-95 transition-all outline-none border border-brand-neon/20 flex items-center gap-1 cursor-pointer"
                   >
