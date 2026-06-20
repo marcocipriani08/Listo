@@ -38,9 +38,30 @@
           }
         };
 
+        var shouldIgnoreError = function(message, stack) {
+          if (!message) return false;
+          var msg = message.toLowerCase();
+          var stk = (stack || '').toLowerCase();
+          
+          // Ignora esplicitamente errori di abort, cancellazione o di rete e ridimensionamento innocui
+          if (msg.indexOf('abort') !== -1) return true;
+          if (msg.indexOf('cancel') !== -1) return true;
+          if (msg.indexOf('resizeobserver') !== -1) return true;
+          if (msg.indexOf('unresponsivedetector') !== -1) return true;
+          if (msg.indexOf('extension') !== -1 || stk.indexOf('extension') !== -1) return true;
+          
+          return false;
+        };
+
         window.addEventListener('error', function(event) {
           var errMessage = event.error ? event.error.toString() : event.message;
           var errStack = event.error ? event.error.stack : '';
+          
+          if (shouldIgnoreError(errMessage, errStack)) {
+            console.warn("Ignorato errore innocuo:", errMessage);
+            return;
+          }
+          
           renderCrashScreen("Errore critico durante l'inizializzazione dell'applicazione.", errMessage, errStack);
         });
 
@@ -48,6 +69,12 @@
           var reason = event.reason;
           var errMessage = reason ? reason.toString() : 'Promessa non gestita rifiutata';
           var errStack = reason && reason.stack ? reason.stack : '';
+          
+          if (shouldIgnoreError(errMessage, errStack)) {
+            console.warn("Ignorata promessa rifiutata innocua:", errMessage);
+            return;
+          }
+          
           renderCrashScreen("Errore di rete o database asincrono non gestito.", errMessage, errStack);
         });
       })();
